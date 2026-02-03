@@ -81,6 +81,10 @@ const RESPONSE_SCHEMA = {
 // ================= API ENDPOINT =================
 app.post("/api/engage", async (req, res) => {
   // Auth check
+  console.log("🔥 GUVI HIT /api/engage");
+  console.log("Headers:", req.headers);
+  console.log("Body:", req.body);
+
   if (req.headers["x-api-key"] !== X_API_KEY) {
     return res.status(401).json({ status: "error", message: "401 Unauthorized" });
   }
