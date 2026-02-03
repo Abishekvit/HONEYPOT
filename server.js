@@ -85,9 +85,22 @@ app.post("/api/engage", async (req, res) => {
     return res.status(401).json({ status: "error", message: "401 Unauthorized" });
   }
 
+  // ✅ GUVI ENDPOINT TESTER HANDSHAKE (IMPORTANT)
+  if (!req.body || Object.keys(req.body).length === 0) {
+    return res.json({
+      status: "success",
+      message: "Honeypot endpoint reachable and authenticated"
+    });
+  }
+
   const { sessionId, message, conversationHistory } = req.body;
+
+  // Normal honeypot validation
   if (!sessionId || !message || !message.text) {
-    return res.status(400).json({ status: "error", message: "Invalid request body" });
+    return res.status(400).json({
+      status: "error",
+      message: "Invalid request body"
+    });
   }
 
   console.log(`[${sessionId}] Incoming: ${message.text}`);
