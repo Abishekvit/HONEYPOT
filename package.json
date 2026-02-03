@@ -1,0 +1,33 @@
+{
+  "name": "sentinel---agentic-honey-pot-system",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "lucide-react": "^0.563.0",
+    "@google/genai": "^1.39.0",
+    "react-dom": "^19.2.4",
+    "react": "^19.2.4",
+    "express": "^5.2.1",
+    "cors": "^2.8.6",
+    "body-parser": "^2.2.2",
+    "dotenv": "^17.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  },
+  "description": "SENTINEL is an AI-driven security engine designed for the GUVI Hackathon. It intercepts fraudulent messages, engages scammers, and reports intelligence server-to-server.",
+  "main": "server.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Sentinel - Agentic Honey-Pot System",
+  "description": "An AI-powered system designed to detect scam intent, autonomously engage scammers to maintain believability, and extract actionable intelligence using Gemini-3 reasoning.",
+  "requestFramePermissions": []
+}
