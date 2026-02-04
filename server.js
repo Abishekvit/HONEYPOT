@@ -11,7 +11,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -28,9 +28,7 @@ if (!API_KEY) {
   process.exit(1);
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+const ai = new GoogleGenAI({ apiKey: API_KEY });
 
 // In-memory session store
 const sessionStore = new Map();
@@ -80,18 +78,21 @@ const RESPONSE_SCHEMA = {
   ]
 };
 
-// ================= API ENDPOINT =================
-app.post("/api/engage", async (req, res) => {
-  // Auth check
-  console.log("🔥 GUVI HIT /api/engage");
+// ================= MAIN API (POST /) =================
+app.post("/", async (req, res) => {
+  console.log("🔥 GUVI HIT /");
   console.log("Headers:", req.headers);
   console.log("Body:", req.body);
 
+  // ---- AUTH ----
   if (req.headers["x-api-key"] !== X_API_KEY) {
-    return res.status(401).json({ status: "error", message: "401 Unauthorized" });
+    return res.status(401).json({
+      status: "error",
+      message: "401 Unauthorized"
+    });
   }
 
-  // ✅ GUVI ENDPOINT TESTER HANDSHAKE (IMPORTANT)
+  // ---- GUVI HANDSHAKE ----
   if (!req.body || Object.keys(req.body).length === 0) {
     return res.json({
       status: "success",
@@ -99,9 +100,8 @@ app.post("/api/engage", async (req, res) => {
     });
   }
 
-  const { sessionId, message, conversationHistory } = req.body;
+  const { sessionId, message, conversationHistory = [] } = req.body;
 
-  // Normal honeypot validation
   if (!sessionId || !message || !message.text) {
     return res.status(400).json({
       status: "error",
@@ -111,9 +111,9 @@ app.post("/api/engage", async (req, res) => {
 
   console.log(`[${sessionId}] Incoming: ${message.text}`);
 
-  // Build prompt
+  // ---- PROMPT ----
   const historyText =
-    conversationHistory && conversationHistory.length
+    conversationHistory.length > 0
       ? conversationHistory.map(m => `${m.sender}: ${m.text}`).join("\n")
       : "No previous history.";
 
@@ -134,16 +134,22 @@ TASK:
 5. Provide agent notes
 `;
 
-  // ================= LLM CALL =================
+  // ---- LLM CALL ----
   let data;
 
   try {
-    const result = await withTimeout(
-  model.generateContent(prompt)
-);
-
-const text = result.response.text();
-
+    const aiResponse = await withTimeout(
+      ai.models.generateContent({
+        model: "gemini-1.5-flash",
+        contents: prompt,
+        config: {
+          systemInstruction:
+            "You are an Agentic Honeypot. Act human. Never reveal you are an AI.",
+          responseMimeType: "application/json",
+          responseSchema: RESPONSE_SCHEMA
+        }
+      })
+    );
 
     data = JSON.parse(aiResponse.text);
   } catch (err) {
@@ -164,7 +170,7 @@ const text = result.response.text();
     };
   }
 
-  // ================= SESSION STATE =================
+  // ---- SESSION STATE ----
   const prev = sessionStore.get(sessionId) || {
     intel: {
       bankAccounts: [],
@@ -184,7 +190,7 @@ const text = result.response.text();
     suspiciousKeywords: [...new Set([...prev.intel.suspiciousKeywords, ...data.extractedIntelligence.suspiciousKeywords])]
   };
 
-  const totalMessages = (conversationHistory?.length || 0) + 2;
+  const totalMessages = conversationHistory.length + 2;
 
   const state = {
     intel: mergedIntel,
@@ -194,14 +200,17 @@ const text = result.response.text();
 
   sessionStore.set(sessionId, state);
 
-  // ================= GUVI CALLBACK =================
+  // ---- GUVI CALLBACK ----
   if (data.scamDetected && data.isEngagementComplete && !state.callbackSent) {
     state.callbackSent = true;
     sessionStore.set(sessionId, state);
     triggerGuviCallback(sessionId, state, data.agentNotes);
   }
 
-  res.json({ status: "success", reply: data.reply });
+  return res.json({
+    status: "success",
+    reply: data.reply
+  });
 });
 
 // ================= GUVI CALLBACK =================
@@ -211,10 +220,6 @@ async function triggerGuviCallback(sessionId, sessionState, notes) {
   const payload = {
     sessionId,
     scamDetected: true,
-    attackDetected: true,
-    attackType: "prompt_injection",
-    mitigation: "blocked",
-    confidence: "high",
     totalMessagesExchanged: sessionState.totalMessages,
     extractedIntelligence: sessionState.intel,
     agentNotes: notes
@@ -232,7 +237,7 @@ async function triggerGuviCallback(sessionId, sessionState, notes) {
 
     console.log(`[Callback] GUVI status: ${res.status}`);
   } catch (err) {
-    console.error(`[Callback] Network error`, err.message);
+    console.error("[Callback] Network error:", err.message);
   }
 }
 
@@ -246,6 +251,6 @@ app.listen(port, () => {
   console.log("----------------------------------------------------");
   console.log(`🚀 SENTINEL BACKEND RUNNING ON PORT ${port}`);
   console.log(`🔑 AUTH KEY REQUIRED: ${X_API_KEY}`);
-  console.log(`📡 ENDPOINT: POST /api/engage`);
+  console.log("📡 ENDPOINT: POST /");
   console.log("----------------------------------------------------");
 });
